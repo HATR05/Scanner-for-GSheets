@@ -1,35 +1,26 @@
 package com.donisi.scannerforgsheets;
 
 
-import android.Manifest;
+
 import android.content.Context;
-import android.content.Intent;
-import android.content.pm.PackageManager;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
 
-import androidx.core.app.ActivityCompat;
+import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
 
-import android.util.Log;
-import android.util.SparseArray;
 import android.view.LayoutInflater;
-import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
 import android.view.ViewGroup;
-import android.webkit.URLUtil;
+
 import android.widget.Switch;
-import android.widget.Toast;
 
 
 import com.google.android.gms.vision.CameraSource;
-import com.google.android.gms.vision.Detector;
 import com.google.android.gms.vision.barcode.Barcode;
 import com.google.android.gms.vision.barcode.BarcodeDetector;
 
-import java.io.IOException;
 
 
 /**
@@ -41,23 +32,21 @@ import java.io.IOException;
  * create an instance of this fragment.
  */
 public class FragmentQR extends Fragment{
-    // TODO: Rename parameter arguments, choose names that match
-    // the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
+    /* TODO: Rename parameter arguments, choose names that match
+     the fragment initialization parameters, e.g. ARG_ITEM_NUMBER*/
     private static final String ARG_PARAM1 = "param1";
     private static final String ARG_PARAM2 = "param2";
 
     // TODO: Rename and change types of parameters
     private String mParam1;
     private String mParam2;
+    private OnFragmentInteractionListener mListener;
     private CameraSource cameraSource;
     private SurfaceView cameraView;
-    private final int MY_PERMISSIONS_REQUEST_CAMERA = 1;
     private String token = "";
-    private String tokenanterior = "";
-    private View vista;
     private Switch mode;
-
-    private OnFragmentInteractionListener mListener;
+    String mode_flag = "";
+    private QRDetector qrDetector;
 
     public FragmentQR() {
         // Required empty public constructor
@@ -96,11 +85,12 @@ public class FragmentQR extends Fragment{
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
-        vista = inflater.inflate(R.layout.fragment_qr, container, false);
+        View vista = inflater.inflate(R.layout.fragment_qr, container, false);
 
-        cameraView = (SurfaceView) vista.findViewById(R.id.camera_view);
-        mode = (Switch) vista.findViewById(R.id.switch_mode);
-        initQR();
+        cameraView = vista.findViewById(R.id.camera_view);
+        mode = vista.findViewById(R.id.switch_mode);
+        initQR(getContext().getApplicationContext());
+        //change_info.change_info(qrDetector.getToken());
         return vista;
     }
 
@@ -112,14 +102,9 @@ public class FragmentQR extends Fragment{
     }
 
     @Override
-    public void onAttach(Context context) {
+    public void onAttach(@NonNull Context context) {
         super.onAttach(context);
-        if (context instanceof Scanned.OnFragmentInteractionListener) {
-            mListener = (OnFragmentInteractionListener) context;
-        } else {
-            throw new RuntimeException(context.toString()
-                    + " must implement OnFragmentInteractionListener");
-        }
+
     }
 
     @Override
@@ -147,125 +132,35 @@ public class FragmentQR extends Fragment{
     //-------------------------------------------------------------------------------------------------------------
 
     public void which_mode(Switch mode){
+
         if (mode.isChecked()){
-            token = "1,";
+            mode_flag = "1,";
         }else{
-            token = "0,";
+            mode_flag = "0,";
         }
     }
 
     //-------------------------------------------------------------------------------------------------------------
 
-    public void initQR() {
+   private void initQR(Context context) {
 
         // creo el detector qr
         BarcodeDetector barcodeDetector =
-                new BarcodeDetector.Builder(getContext().getApplicationContext())
-                        .setBarcodeFormats(Barcode.QR_CODE)
-                        .build();
+                new BarcodeDetector.Builder(context).setBarcodeFormats(Barcode.QR_CODE).build();
 
         // creo la camara
         cameraSource = new CameraSource
-                .Builder(getContext().getApplicationContext(), barcodeDetector)
+                .Builder(context, barcodeDetector)
                 .setRequestedPreviewSize(1600, 1024)
                 .setAutoFocusEnabled(true) //you should add this feature
                 .build();
 
         // listener de ciclo de vida de la camara
-        cameraView.getHolder().addCallback(new SurfaceHolder.Callback() {
-            @Override
-            public void surfaceCreated(SurfaceHolder holder) {
-
-                // verifico si el usuario dio los permisos para la camara
-                if (ActivityCompat.checkSelfPermission(getContext().getApplicationContext(), Manifest.permission.CAMERA)
-                        != PackageManager.PERMISSION_GRANTED) {
-
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                        // verificamos la version de ANdroid que sea al menos la M para mostrar
-                        // el dialog de la solicitud de la camara
-                        if (shouldShowRequestPermissionRationale(
-                                Manifest.permission.CAMERA)) ;
-                        requestPermissions(new String[]{Manifest.permission.CAMERA},
-                                MY_PERMISSIONS_REQUEST_CAMERA);
-                    }
-
-                } else {
-                    try {
-                        cameraSource.start(cameraView.getHolder());
-                    } catch (IOException ie) {
-                        Log.e("CAMERA SOURCE", ie.getMessage());
-                    }
-                }
-            }
-
-            @Override
-            public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
-            }
-
-            @Override
-            public void surfaceDestroyed(SurfaceHolder holder) {
-                cameraSource.stop();
-            }
-        });
+        CameraPermit permissions = new CameraPermit(cameraSource,context,cameraView);
+        cameraView.getHolder().addCallback(permissions);
 
         // preparo el detector de QR
-        barcodeDetector.setProcessor(new Detector.Processor<Barcode>() {
-            @Override
-            public void release() {
-            }
-
-
-            @Override
-            public void receiveDetections(Detector.Detections<Barcode> detections) {
-                final SparseArray<Barcode> barcodes = detections.getDetectedItems();
-
-                if (barcodes.size() > 0) {
-
-                    // obtenemos el token
-                    token = token+barcodes.valueAt(0).displayValue;
-//                    Toast.makeText(getContext().getApplicationContext(),token,Toast.LENGTH_LONG).show();
-                    // verificamos que el token anterior no se igual al actual
-                    // esto es util para evitar multiples llamadas empleando el mismo token
-                    if (!token.equals(tokenanterior)) {
-
-                        // guardamos el ultimo token proceado
-                        tokenanterior = token;
-                        Log.i("token", token);
-
-                        Intent shareIntent = new Intent();
-                        shareIntent.setAction(Intent.ACTION_SEND);
-                        shareIntent.putExtra(Intent.EXTRA_TEXT, token);
-                        shareIntent.setType("text/plain");
-                        startActivity(shareIntent);
-
-                        new Thread(new Runnable() {
-                            public void run() {
-                                try {
-                                    synchronized (this) {
-                                        wait(5000);
-                                        // limpiamos el token
-                                        tokenanterior = "";
-                                    }
-                                } catch (InterruptedException e) {
-                                    // TODO Auto-generated catch block
-                                    Log.e("Error", "Waiting didnt work!!");
-                                    e.printStackTrace();
-                                }
-                            }
-                        }).start();
-
-                    }
-                }
-            }
-        });
-
-
-
+        qrDetector = new QRDetector(context, token);
+        barcodeDetector.setProcessor(qrDetector);
     }
-
-
-
-
-
-
 }

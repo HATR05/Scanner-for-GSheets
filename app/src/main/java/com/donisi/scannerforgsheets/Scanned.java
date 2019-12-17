@@ -9,6 +9,9 @@ import androidx.fragment.app.Fragment;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.TextView;
+
+import org.w3c.dom.Text;
 
 
 /**
@@ -28,6 +31,8 @@ public class Scanned extends Fragment {
     // TODO: Rename and change types of parameters
     private String mParam1;
     private String mParam2;
+    private TextView token_txt;
+    private View view;
 
     private OnFragmentInteractionListener mListener;
 
@@ -66,7 +71,10 @@ public class Scanned extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
-        return inflater.inflate(R.layout.scanned_fragment, container, false);
+        view = inflater.inflate(R.layout.scanned_fragment, container, false);
+        token_txt = view.findViewById(R.id.token_txt);
+
+        return view;
     }
 
     // TODO: Rename method, update argument and hook method into UI event
@@ -107,4 +115,5 @@ public class Scanned extends Fragment {
         // TODO: Update argument type and name
         void onFragmentInteraction(Uri uri);
     }
+
 }
