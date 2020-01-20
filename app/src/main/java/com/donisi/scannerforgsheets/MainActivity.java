@@ -1,46 +1,49 @@
 package com.donisi.scannerforgsheets;
 
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.fragment.app.FragmentTransaction;
 
-import android.net.Uri;
+import android.content.Context;
 import android.os.Bundle;
-import android.view.View;
+import android.view.SurfaceView;
+import android.widget.Switch;
 
-public class MainActivity extends AppCompatActivity implements Scanned.OnFragmentInteractionListener, FragmentQR.OnFragmentInteractionListener {
+import com.google.android.gms.vision.CameraSource;
+import com.google.android.gms.vision.barcode.Barcode;
+import com.google.android.gms.vision.barcode.BarcodeDetector;
 
-    Scanned fragment_scanned;
-    FragmentQR fragment_qr;
+public class MainActivity extends AppCompatActivity{
+
+    private SurfaceView cameraView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
-        fragment_scanned = new Scanned();
-        fragment_qr = new FragmentQR();
-
-        getSupportFragmentManager().beginTransaction().add(R.id.fragment_data,fragment_qr).commit();
+        cameraView = findViewById(R.id.camera_view);
+        initQR(getApplicationContext());
     }
 
-    @Override
-    public void onFragmentInteraction(Uri uri) {
+    private void initQR(Context context) {
+        // creo el detector qr
+        BarcodeDetector barcodeDetector =
+                new BarcodeDetector.Builder(context).setBarcodeFormats(Barcode.QR_CODE).build();
 
-    }
+        // creo la camara
+        CameraSource cameraSource = new CameraSource
+                .Builder(context, barcodeDetector)
+                .setRequestedPreviewSize(1600, 1024)
+                .setAutoFocusEnabled(true)
+                .build();
 
-    public void onClick(View view){
+        // Permisos para hacer uso de la camara
+        CameraPermit permissions = new CameraPermit(cameraSource,context,cameraView);
+        cameraView.getHolder().addCallback(permissions);
 
-        FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
+        // Preparo el detector de QR
 
-        switch (view.getId()){
-            case R.id.scanner_btn:
-                transaction.replace(R.id.fragment_data, fragment_qr);
-                break;
-            case R.id.scanned_btn:
-                transaction.replace(R.id.fragment_data, fragment_scanned);
-                break;
-        }
-
-        transaction.commit();
+        Switch switch_mode = findViewById(R.id.switch_mode);
+        QRDetector qrDetector = new QRDetector(switch_mode, this);
+        barcodeDetector.setProcessor(qrDetector);
     }
 }
