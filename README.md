@@ -1,5 +1,5 @@
 # Scanner-for-GSheets
-**Versión:** 0.1 
+**Versión:** 0.1 - 
 Esta aplicación permite escanear códigos qr, tomando la información y enviándola a una hoja de calculo de google.
 
 Aplicación compuesta por 4 clases adicionales a "MainActivity"
